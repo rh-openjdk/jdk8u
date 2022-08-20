@@ -33,8 +33,10 @@ import java.util.*;
 
 import java.security.*;
 
+import sun.misc.SharedSecrets;
 import sun.security.action.GetPropertyAction;
 import sun.security.util.PropertyExpander;
+import sun.security.util.SecurityProperties;
 
 import sun.security.pkcs11.wrapper.*;
 import static sun.security.pkcs11.wrapper.PKCS11Constants.*;
@@ -49,6 +51,11 @@ import static sun.security.pkcs11.TemplateManager.*;
  * @since   1.5
  */
 final class Config {
+
+    private static final boolean systemFipsEnabled = SharedSecrets
+            .getJavaSecuritySystemConfiguratorAccess().isSystemFipsEnabled();
+
+    private static final String FIPS_NSSDB_PATH_PROP = "fips.nssdb.path";
 
     static final int ERR_HALT       = 1;
     static final int ERR_IGNORE_ALL = 2;
@@ -80,6 +87,18 @@ final class Config {
         Config config = configMap.get(name);
         if (config != null) {
             return config;
+        }
+        if (systemFipsEnabled) {
+            /*
+             * The nssSecmodDirectory attribute in the SunPKCS11
+             * NSS configuration file takes the value of the
+             * fips.nssdb.path System property after expansion.
+             * Security properties expansion is unsupported.
+             */
+            System.setProperty(
+                    FIPS_NSSDB_PATH_PROP,
+                    SecurityProperties.privilegedGetOverridable(
+                            FIPS_NSSDB_PATH_PROP));
         }
         try {
             config = new Config(name, stream);
