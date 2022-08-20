@@ -49,8 +49,6 @@ import javax.crypto.spec.SecretKeySpec;
  *   for a successful login into an NSS DB. Some additional unitary testing
  *   is then peformed. This test depends on NSS modutil and must be run in
  *   FIPS mode (the SunPKCS11-NSS-FIPS security provider has to be available).
- * @modules jdk.crypto.cryptoki/sun.security.pkcs11:+open
- *          java.base/jdk.internal.misc
  * @library /java/security/testlibrary
  * @requires (jdk.version.major >= 8)
  * @run main/othervm/timeout=600 NssdbPin
