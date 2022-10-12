@@ -49,6 +49,7 @@ import sun.misc.SharedSecrets;
 
 import sun.security.util.Debug;
 import sun.security.util.ResourcesMgr;
+import sun.security.util.SecurityProperties;
 
 import sun.security.pkcs11.Secmod.*;
 
@@ -85,6 +86,8 @@ public final class SunPKCS11 extends AuthProvider {
         }
         fipsImportKey = fipsImportKeyTmp;
     }
+
+    private static final String FIPS_NSSDB_PATH_PROP = "fips.nssdb.path";
 
     private static final long serialVersionUID = -1354835039035306505L;
 
@@ -147,14 +150,30 @@ public final class SunPKCS11 extends AuthProvider {
         return "---DummyConfig-" + id + "---";
     }
 
+    private static String fipsSunPKCS11Hook(String providerName) {
+        if (systemFipsEnabled) {
+            /*
+             * The nssSecmodDirectory attribute in the SunPKCS11
+             * NSS configuration file takes the value of the
+             * fips.nssdb.path System property after expansion.
+             * Security properties expansion is unsupported.
+             */
+            System.setProperty(
+                    FIPS_NSSDB_PATH_PROP,
+                    SecurityProperties.privilegedGetOverridable(
+                            FIPS_NSSDB_PATH_PROP));
+        }
+        return providerName;
+    }
+
     /**
      * @deprecated use new SunPKCS11(String) or new SunPKCS11(InputStream)
      *         instead
      */
     @Deprecated
     public SunPKCS11(String configName, InputStream configStream) {
-        super("SunPKCS11-" +
-            Config.getConfig(configName, configStream).getName(),
+        super(fipsSunPKCS11Hook("SunPKCS11-" +
+            Config.getConfig(configName, configStream).getName()),
             1.8d, Config.getConfig(configName, configStream).getDescription());
         this.configName = configName;
         this.config = Config.removeConfig(configName);

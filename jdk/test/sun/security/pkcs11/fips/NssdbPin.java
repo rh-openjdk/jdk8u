@@ -26,7 +26,6 @@ import java.io.BufferedWriter;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.Provider;
@@ -340,8 +339,7 @@ public final class NssdbPin {
 
     private static void generatePinFile(TestContext ctx) throws Throwable {
         ctx.nssdbPinFile = Files.createTempFile(ctx.workspace, null, null);
-        try (BufferedWriter bw = Files.newBufferedWriter(ctx.nssdbPinFile,
-                new OpenOption[] {})) {
+        try (BufferedWriter bw = Files.newBufferedWriter(ctx.nssdbPinFile)) {
             bw.write(ctx.pin);
             bw.write(System.lineSeparator());
             bw.write("2nd line with garbage");
