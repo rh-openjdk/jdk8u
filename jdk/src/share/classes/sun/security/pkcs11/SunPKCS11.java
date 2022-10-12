@@ -150,7 +150,7 @@ public final class SunPKCS11 extends AuthProvider {
         return "---DummyConfig-" + id + "---";
     }
 
-    private static String fipsSunPKCS11Hook(String providerName) {
+    private static String fipsPreConfigHook() {
         if (systemFipsEnabled) {
             /*
              * The nssSecmodDirectory attribute in the SunPKCS11
@@ -163,7 +163,7 @@ public final class SunPKCS11 extends AuthProvider {
                     SecurityProperties.privilegedGetOverridable(
                             FIPS_NSSDB_PATH_PROP));
         }
-        return providerName;
+        return "";
     }
 
     /**
@@ -172,8 +172,8 @@ public final class SunPKCS11 extends AuthProvider {
      */
     @Deprecated
     public SunPKCS11(String configName, InputStream configStream) {
-        super(fipsSunPKCS11Hook("SunPKCS11-" +
-            Config.getConfig(configName, configStream).getName()),
+        super(fipsPreConfigHook() + "SunPKCS11-" +
+            Config.getConfig(configName, configStream).getName(),
             1.8d, Config.getConfig(configName, configStream).getDescription());
         this.configName = configName;
         this.config = Config.removeConfig(configName);
