@@ -309,8 +309,7 @@ security.useSystemPropertiesFile=false
 
 #
 # Specifies the system certificate store
-# This property may be disabled using
-# -Djava.security.disableSystemCACerts=true
+# This property may be disabled using an empty value
 #
 security.systemCACerts=${java.home}/lib/security/cacerts
 
