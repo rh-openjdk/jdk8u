@@ -77,7 +77,7 @@ final class TrustStoreManager {
                 GetPropertyAction.privilegedGetProperty("java.home") +
                 fileSep + "lib" + fileSep + "security";
         private static final String defaultStore =
-            KeyStoreUtil.getCacertsKeyStoreFile().getPath();
+            KeyStoreUtil.getCacertsKeyStorePath();
         private static final String jsseDefaultStore =
                 defaultStorePath + fileSep + "jssecacerts";
 
@@ -151,22 +151,21 @@ final class TrustStoreManager {
                         String[] fileNames =
                                 new String[] {storePropName, defaultStore};
                         for (String fileName : fileNames) {
-                            if (fileName != null && !"".equals(fileName)) {
-                                File f = new File(fileName);
-                                if (f.isFile() && f.canRead()) {
-                                    temporaryName = fileName;;
-                                    temporaryFile = f;
-                                    temporaryTime = f.lastModified();
+                            File f = new File(fileName);
+                            if (f.isFile() && f.canRead()) {
+                                temporaryName = fileName;;
+                                temporaryFile = f;
+                                temporaryTime = f.lastModified();
 
-                                    break;
-                                }
-                                // Not break, the file is inaccessible.
-                                if (SSLLogger.isOn &&
+                                break;
+                            }
+
+                            // Not break, the file is inaccessible.
+                            if (SSLLogger.isOn &&
                                     SSLLogger.isOn("trustmanager")) {
-                                    SSLLogger.fine(
-                                            "Inaccessible trust store: " +
-                                            fileName);
-                                }
+                                SSLLogger.fine(
+                                        "Inaccessible trust store: " +
+                                        fileName);
                             }
                         }
                     } else {

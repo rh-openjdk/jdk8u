@@ -103,25 +103,18 @@ public class KeyStoreUtil {
     /**
      * Returns the path to the cacerts DB
      */
-    public static File getCacertsKeyStoreFile()
+    public static String getCacertsKeyStorePath()
     {
-        String sep = File.separator;
-        File file = null;
         // Check system DB first, preferring system property over security one
         String systemDB = SecurityProperties
                 .privilegedGetOverridable(SYSTEM_CA_CERTS_PROP);
-        if (systemDB != null && !"".equals(systemDB)) {
-            file = new File(systemDB);
+        if (systemDB != null && !"".equals(systemDB) &&
+                (new File(systemDB)).isFile()) {
+            return systemDB;
         }
-        if (file == null || !file.exists()) {
-            file = new File(System.getProperty("java.home") + sep
-                            + "lib" + sep + "security" + sep
-                            + "cacerts");
-        }
-        if (file.exists()) {
-            return file;
-        }
-        return null;
+        String sep = File.separator;
+        return System.getProperty("java.home") + sep
+                + "lib" + sep + "security" + sep + "cacerts";
     }
 
     /**
@@ -130,9 +123,11 @@ public class KeyStoreUtil {
     public static KeyStore getCacertsKeyStore()
         throws Exception
     {
+        File file = new File(getCacertsKeyStorePath());
+        if (!file.exists()) {
+            return null;
+        }
         KeyStore caks = null;
-        File file = getCacertsKeyStoreFile();
-        if (file == null) { return null; }
         try (FileInputStream fis = new FileInputStream(file)) {
             caks = KeyStore.getInstance(JKS);
             caks.load(fis, null);
