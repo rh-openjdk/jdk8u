@@ -77,7 +77,8 @@ final class TrustStoreManager {
                 GetPropertyAction.privilegedGetProperty("java.home") +
                 fileSep + "lib" + fileSep + "security";
         private static final String defaultStore =
-            KeyStoreUtil.getCacertsKeyStorePath();
+                AccessController.doPrivileged((PrivilegedAction<String>) () ->
+                        KeyStoreUtil.getCacertsKeyStorePath());
         private static final String jsseDefaultStore =
                 defaultStorePath + fileSep + "jssecacerts";
 
