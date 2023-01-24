@@ -26,6 +26,11 @@
 
 import java.io.*;
 
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.Provider;
 
 public class SecmodTest extends PKCS11Test {
@@ -55,18 +60,20 @@ public class SecmodTest extends PKCS11Test {
 
         DBDIR = System.getProperty("test.classes", ".") + SEP + "tmpdb";
         if (useSqlite) {
-            System.setProperty("pkcs11test.nss.db", "sql:/" + DBDIR);
+            System.setProperty("pkcs11test.nss.db", "sql:" + DBDIR);
         } else {
             System.setProperty("pkcs11test.nss.db", DBDIR);
         }
         File dbdirFile = new File(DBDIR);
-        if (dbdirFile.exists() == false) {
-            dbdirFile.mkdir();
+        if (dbdirFile.exists()) {
+            deleteDir(dbdirFile.toPath());
         }
+        dbdirFile.mkdir();
 
         if (useSqlite) {
             copyFile("key4.db", BASE, DBDIR);
             copyFile("cert9.db", BASE, DBDIR);
+            copyFile("pkcs11.txt", BASE, DBDIR);
         } else {
             copyFile("secmod.db", BASE, DBDIR);
             copyFile("key3.db", BASE, DBDIR);
@@ -88,6 +95,25 @@ public class SecmodTest extends PKCS11Test {
         }
         in.close();
         out.close();
+    }
+
+    private static void deleteDir(final Path directory) throws IOException {
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+
+            @Override
+            public FileVisitResult visitFile(Path file,
+                    BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                    throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     public void main(Provider p) throws Exception {
