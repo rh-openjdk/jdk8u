@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -473,11 +473,15 @@ GetJavaProperties(JNIEnv* env)
          * Windows Server 2012          6               2  (!VER_NT_WORKSTATION)
          * Windows Server 2012 R2       6               3  (!VER_NT_WORKSTATION)
          * Windows 10                   10              0  (VER_NT_WORKSTATION)
+         * Windows 11                   10              0  (VER_NT_WORKSTATION)
+         *       where (buildNumber >= 22000)
          * Windows Server 2016          10              0  (!VER_NT_WORKSTATION)
          * Windows Server 2019          10              0  (!VER_NT_WORKSTATION)
          *       where (buildNumber > 17762)
          * Windows Server 2022          10              0  (!VER_NT_WORKSTATION)
          *       where (buildNumber > 20347)
+         * Windows Server 2025          10              0  (!VER_NT_WORKSTATION)
+         *       where (buildNumber > 26039)
          *
          * This mapping will presumably be augmented as new Windows
          * versions are released.
@@ -546,7 +550,14 @@ GetJavaProperties(JNIEnv* env)
             } else if (majorVersion == 10) {
                 if (is_workstation) {
                     switch (minorVersion) {
-                    case  0: sprops.os_name = "Windows 10";           break;
+                    case  0:
+                        /* Windows 11 21H2 (original release) build number is 22000 */
+                        if (buildNumber >= 22000) {
+                            sprops.os_name = "Windows 11";
+                        } else {
+                            sprops.os_name = "Windows 10";
+                        }
+                        break;
                     default: sprops.os_name = "Windows NT (unknown)";
                     }
                 } else {
@@ -554,7 +565,10 @@ GetJavaProperties(JNIEnv* env)
                     case  0:
                         /* Windows server 2019 GA 10/2018 build number is 17763 */
                         /* Windows server 2022 build number is 20348 */
-                        if (buildNumber > 20347) {
+                        /* Windows server 2025 Preview build is 26040 */
+                        if (buildNumber > 26039) {
+                            sprops.os_name = "Windows Server 2025";
+                        } else if (buildNumber > 20347) {
                             sprops.os_name = "Windows Server 2022";
                         } else if (buildNumber > 17676) {
                             sprops.os_name = "Windows Server 2019";

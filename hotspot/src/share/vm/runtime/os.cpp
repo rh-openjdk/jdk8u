@@ -619,7 +619,7 @@ void* os::malloc(size_t size, MEMFLAGS memflags, const NativeCallStack& stack) {
 
   // Since os::malloc can be called when the libjvm.{dll,so} is
   // first loaded and we don't have a thread yet we must accept NULL also here.
-  assert(!os::ThreadCrashProtection::is_crash_protected(ThreadLocalStorage::thread()),
+  assert(!os::ThreadCrashProtection::is_crash_protected(Thread::current_or_null()),
          "malloc() not allowed when crash protection is set");
 
   if (size == 0) {
@@ -631,6 +631,11 @@ void* os::malloc(size_t size, MEMFLAGS memflags, const NativeCallStack& stack) {
   // NMT support
   NMT_TrackingLevel level = MemTracker::tracking_level();
   size_t            nmt_header_size = MemTracker::malloc_header_size(level);
+
+  // Check for overflow.
+  if (size + nmt_header_size < size) {
+    return NULL;
+  }
 
 #ifndef ASSERT
   const size_t alloc_size = size + nmt_header_size;

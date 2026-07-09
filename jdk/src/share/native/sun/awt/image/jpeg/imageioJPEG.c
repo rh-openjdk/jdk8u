@@ -1131,6 +1131,10 @@ imageio_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
         return;
     }
     num_bytes += sb->remaining_skip;
+    // Check for overflow if remaining_skip value is too large
+    if (num_bytes < 0) {
+        return;
+    }
     sb->remaining_skip = 0;
 
     /* First the easy case where we are skipping <= the current contents. */
@@ -2686,7 +2690,7 @@ Java_com_sun_imageio_plugins_jpeg_JPEGImageWriter_writeTables
     RELEASE_ARRAYS(env, data, NULL);
 }
 
-static void freeArray(void** arr, jint size) {
+static void freeArray(UINT8** arr, jint size) {
     int i;
     if (arr != NULL) {
         for (i = 0; i < size; i++) {

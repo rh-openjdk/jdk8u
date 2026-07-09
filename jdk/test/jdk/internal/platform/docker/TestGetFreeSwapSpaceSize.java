@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2020, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,7 @@
 /*
  * @test
  * @bug 8242480
- * @library /lib
+ * @library /test/lib
  * @build GetFreeSwapSpaceSize
  * @run driver TestGetFreeSwapSpaceSize
  */

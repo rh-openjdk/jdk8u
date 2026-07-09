@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,15 +21,18 @@
  * questions.
  */
 
+import jdk.internal.platform.Metrics;
 import jdk.test.lib.Utils;
 import jdk.test.lib.containers.docker.Common;
 import jdk.test.lib.containers.docker.DockerRunOptions;
 import jdk.test.lib.containers.docker.DockerTestUtils;
+import jdk.test.lib.process.OutputAnalyzer;
 
 /*
  * @test
+ * @requires os.family == "linux"
  * @summary Test JDK Metrics class when running inside docker container
- * @library /lib /
+ * @library /test/lib /
  * @build MetricsMemoryTester
  * @run main/timeout=360 TestDockerMemoryMetrics
  */
@@ -51,26 +54,45 @@ public class TestDockerMemoryMetrics {
         try {
             testMemoryLimit("200m");
             testMemoryLimit("1g");
+            // Memory limit test with additional cgroup fs mounted
+            testMemoryLimit("500m", true /* cgroup fs mount */);
 
             testMemoryAndSwapLimit("200m", "1g");
             testMemoryAndSwapLimit("100m", "200m");
 
-            testKernelMemoryLimit("100m");
-            testKernelMemoryLimit("1g");
+            Metrics m = Metrics.systemMetrics();
+            // kernel memory, '--kernel-memory' switch, and OOM killer,
+            // '--oom-kill-disable' switch, tests not supported by cgroupv2
+            // runtimes
+            if (m != null) {
+                if ("cgroupv1".equals(m.getProvider())) {
+                    testKernelMemoryLimit("100m");
+                    testKernelMemoryLimit("1g");
 
-            testOomKillFlag("100m", false);
+                    testOomKillFlag("100m", false);
+                } else {
+                    System.out.println("kernel memory tests and OOM Kill flag tests not " +
+                                       "possible with cgroupv2.");
+                }
+            }
             testOomKillFlag("100m", true);
 
-            testMemoryFailCount("20m");
+            testMemoryFailCount("64m");
 
             testMemorySoftLimit("500m","200m");
 
         } finally {
-            DockerTestUtils.removeDockerImage(imageName);
+            if (!DockerTestUtils.RETAIN_IMAGE_AFTER_TEST) {
+                DockerTestUtils.removeDockerImage(imageName);
+            }
         }
     }
 
     private static void testMemoryLimit(String value) throws Exception {
+        testMemoryLimit(value, false);
+    }
+
+    private static void testMemoryLimit(String value, boolean addCgroupMount) throws Exception {
         Common.logNewTestCase("testMemoryLimit, value = " + value);
         DockerRunOptions opts =
                 new DockerRunOptions(imageName, "/jdk/bin/java", "MetricsMemoryTester");
@@ -78,11 +100,32 @@ public class TestDockerMemoryMetrics {
                 .addDockerOpts("--memory=" + value)
                 .addJavaOpts("-cp", "/test-classes/")
                 .addClassOptions("memory", value);
+        if (addCgroupMount) {
+            // Extra cgroup mount should be ignored by product code
+            opts.addDockerOpts("--volume", "/sys/fs/cgroup:/cgroup-in:ro");
+        }
         DockerTestUtils.dockerRunJava(opts).shouldHaveExitValue(0).shouldContain("TEST PASSED!!!");
     }
 
     private static void testMemoryFailCount(String value) throws Exception {
         Common.logNewTestCase("testMemoryFailCount" + value);
+
+        // Check whether swapping really works for this test
+        // On some systems there is no swap space enabled. And running
+        // 'java -Xms{mem-limit} -Xmx{mem-limit} -version' would fail due to swap space size being 0.
+        DockerRunOptions preOpts =
+                new DockerRunOptions(imageName, "/jdk/bin/java", "-version");
+        preOpts.addDockerOpts("--volume", Utils.TEST_CLASSES + ":/test-classes/")
+                .addDockerOpts("--memory=" + value)
+                .addJavaOpts("-Xms" + value)
+                .addJavaOpts("-Xmx" + value);
+        OutputAnalyzer oa = DockerTestUtils.dockerRunJava(preOpts);
+        String output = oa.getOutput();
+        if (!output.contains("version")) {
+            System.out.println("Swapping doesn't work for this test.");
+            return;
+        }
+
         DockerRunOptions opts =
                 new DockerRunOptions(imageName, "/jdk/bin/java", "MetricsMemoryTester");
         opts.addDockerOpts("--volume", Utils.TEST_CLASSES + ":/test-classes/")
@@ -90,7 +133,13 @@ public class TestDockerMemoryMetrics {
                 .addJavaOpts("-Xmx" + value)
                 .addJavaOpts("-cp", "/test-classes/")
                 .addClassOptions("failcount");
-        DockerTestUtils.dockerRunJava(opts).shouldHaveExitValue(0).shouldContain("TEST PASSED!!!");
+        oa = DockerTestUtils.dockerRunJava(opts);
+        output = oa.getOutput();
+        if (output.contains("Ignoring test")) {
+            System.out.println("Ignored by the tester");
+            return;
+        }
+        oa.shouldHaveExitValue(0).shouldContain("TEST PASSED!!!");
     }
 
     private static void testMemoryAndSwapLimit(String memory, String memandswap) throws Exception {
@@ -127,7 +176,8 @@ public class TestDockerMemoryMetrics {
         }
         opts.addJavaOpts("-cp", "/test-classes/")
                 .addClassOptions("memory", value, oomKillFlag + "");
-        DockerTestUtils.dockerRunJava(opts).shouldHaveExitValue(0).shouldContain("TEST PASSED!!!");
+        OutputAnalyzer oa = DockerTestUtils.dockerRunJava(opts);
+        oa.shouldHaveExitValue(0).shouldContain("TEST PASSED!!!");
     }
 
     private static void testMemorySoftLimit(String mem, String softLimit) throws Exception {

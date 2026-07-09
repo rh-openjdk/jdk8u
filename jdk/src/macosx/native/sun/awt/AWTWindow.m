@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,13 +203,13 @@ AWT_NS_WINDOW_IMPLEMENTATION
     if (IS(styleBits, DECORATED)) {
         type |= NSTitledWindowMask;
         if (IS(styleBits, CLOSEABLE))            type |= NSClosableWindowMask;
-        if (IS(styleBits, MINIMIZABLE))          type |= NSMiniaturizableWindowMask;
         if (IS(styleBits, RESIZABLE))            type |= NSResizableWindowMask;
         if (IS(styleBits, FULL_WINDOW_CONTENT))  type |= NSFullSizeContentViewWindowMask;
     } else {
         type |= NSBorderlessWindowMask;
     }
 
+    if (IS(styleBits, MINIMIZABLE))   type |= NSMiniaturizableWindowMask;
     if (IS(styleBits, TEXTURED))      type |= NSTexturedBackgroundWindowMask;
     if (IS(styleBits, UNIFIED))       type |= NSUnifiedTitleAndToolbarWindowMask;
     if (IS(styleBits, UTILITY))       type |= NSUtilityWindowMask;
@@ -1495,6 +1495,7 @@ JNF_COCOA_ENTER(env);
             int shieldLevel = CGShieldingWindowLevel();
             window.preFullScreenLevel = [nsWindow level];
             [nsWindow setLevel: shieldLevel];
+            [nsWindow makeKeyAndOrderFront: nil];
 
             NSRect screenRect = [[nsWindow screen] frame];
             [nsWindow setFrame:screenRect display:YES];

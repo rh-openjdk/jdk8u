@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.AccessController;
 import java.util.ArrayList;
+import java.util.Objects;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.Soundbank;
 import javax.sound.midi.spi.SoundbankReader;
 
 import sun.reflect.misc.ReflectUtil;
+import sun.security.action.GetBooleanAction;
 
 /**
  * JarSoundbankReader is used to read soundbank object from jar files.
@@ -45,11 +48,20 @@ import sun.reflect.misc.ReflectUtil;
  */
 public final class JARSoundbankReader extends SoundbankReader {
 
+    /**
+     * Value of the system property that enables the Jar soundbank loading
+     * {@code true} if jar sound bank is allowed to be loaded default is
+     * {@code false}.
+     */
+    @SuppressWarnings("removal")
+    private static final boolean JAR_SOUNDBANK_ENABLED =
+            AccessController.doPrivileged(
+                    new GetBooleanAction("jdk.sound.jarsoundbank"));
+
     private static boolean isZIP(URL url) {
         boolean ok = false;
         try {
-            InputStream stream = url.openStream();
-            try {
+            try (InputStream stream = url.openStream()) {
                 byte[] buff = new byte[4];
                 ok = stream.read(buff) == 4;
                 if (ok) {
@@ -58,8 +70,6 @@ public final class JARSoundbankReader extends SoundbankReader {
                         && buff[2] == 0x03
                         && buff[3] == 0x04);
                 }
-            } finally {
-                stream.close();
             }
         } catch (IOException e) {
         }
@@ -68,16 +78,16 @@ public final class JARSoundbankReader extends SoundbankReader {
 
     public Soundbank getSoundbank(URL url)
             throws InvalidMidiDataException, IOException {
-        if (!isZIP(url))
+        Objects.requireNonNull(url);
+        if (!JAR_SOUNDBANK_ENABLED || !isZIP(url))
             return null;
+
         ArrayList<Soundbank> soundbanks = new ArrayList<Soundbank>();
         URLClassLoader ucl = URLClassLoader.newInstance(new URL[]{url});
-        InputStream stream = ucl.getResourceAsStream(
-                "META-INF/services/javax.sound.midi.Soundbank");
-        if (stream == null)
-            return null;
-        try
-        {
+        try (InputStream stream = ucl.getResourceAsStream(
+                    "META-INF/services/javax.sound.midi.Soundbank")) {
+            if (stream == null)
+                return null;
             BufferedReader r = new BufferedReader(new InputStreamReader(stream));
             String line = r.readLine();
             while (line != null) {
@@ -96,10 +106,6 @@ public final class JARSoundbankReader extends SoundbankReader {
                 line = r.readLine();
             }
         }
-        finally
-        {
-            stream.close();
-        }
         if (soundbanks.size() == 0)
             return null;
         if (soundbanks.size() == 1)
@@ -117,6 +123,7 @@ public final class JARSoundbankReader extends SoundbankReader {
 
     public Soundbank getSoundbank(File file)
             throws InvalidMidiDataException, IOException {
+        Objects.requireNonNull(file);
         return getSoundbank(file.toURI().toURL());
     }
 }

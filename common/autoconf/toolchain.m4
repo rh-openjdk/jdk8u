@@ -287,13 +287,6 @@ AC_DEFUN_ONCE([TOOLCHAIN_PRE_DETECTION],
       AC_MSG_ERROR([The xcodebuild tool was not found, the Xcode command line tools are required to build on Mac OS X])
     fi
 
-    # Fail-fast: verify we're building on a supported Xcode version
-    XCODE_VERSION=`$XCODEBUILD -version | grep '^Xcode ' | sed 's/Xcode //'`
-    XC_VERSION_PARTS=( ${XCODE_VERSION//./ } )
-    if test "${XC_VERSION_PARTS[[0]]}" != "6" -a "${XC_VERSION_PARTS[[0]]}" != "9" -a "${XC_VERSION_PARTS[[0]]}" != "10" -a "${XC_VERSION_PARTS[[0]]}" != "11" -a "${XC_VERSION_PARTS[[0]]}" != "12" ; then
-      AC_MSG_ERROR([Xcode 6, 9-12 is required to build JDK 8, the version found was $XCODE_VERSION. Use --with-xcode-path to specify the location of Xcode or make Xcode active by using xcode-select.])
-    fi
-
     # Some versions of Xcode command line tools install gcc and g++ as symlinks to
     # clang and clang++, which will break the build. So handle that here if we need to.
     if test -L "/usr/bin/gcc" -o -L "/usr/bin/g++"; then
@@ -851,6 +844,17 @@ AC_DEFUN_ONCE([TOOLCHAIN_MISC_CHECKS],
     # If this is a --hash-style=gnu system, use --hash-style=both, why?
     HAS_GNU_HASH=`$CC -dumpspecs 2>/dev/null | $GREP 'hash-style=gnu'`
     # This is later checked when setting flags.
+  fi
+
+  if test "x$TOOLCHAIN_TYPE" = xgcc; then
+    if test "x$OPENJDK_TARGET_CPU_ARCH" = "xaarch64" ; then
+      AC_MSG_CHECKING([for broken aarch64 gcc 4.x])
+      COMPILER_VERSION_NUMBER_MAJOR=`$ECHO "$COMPILER_VERSION_NUMBER" | $SED  "s/@<:@^0-9@:>@.*//"`
+      AC_MSG_RESULT([found $COMPILER_VERSION_NUMBER_MAJOR.x])
+      if test $COMPILER_VERSION_NUMBER_MAJOR -lt 5; then
+        AC_MSG_ERROR([GCC < 5 may incorrectly compile HotSpot on aarch64. See JDK-8360869.])
+      fi
+    fi
   fi
 
   # Check for broken SuSE 'ld' for which 'Only anonymous version tag is allowed

@@ -71,6 +71,11 @@ ifneq ($(COMPILER_WARNINGS_FATAL),false)
 endif
 CFLAGS += $(CFLAGS_WARN)
 
+# Extra flags from gnumake's invocation or environment
+CFLAGS += $(HOST_CXXFLAGS)
+LFLAGS += $(HOST_CXXFLAGS) $(HOST_LDFLAGS)
+ASFLAGS += $(HOST_ASFLAGS)
+
 OBJECTNAMES = \
 	adlparse.o \
 	archDesc.o \
